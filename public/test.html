@@ -20,6 +20,17 @@
             var svgDoc = a.contentDocument;
             // get the inner element by id
             var delta = svgDoc.getElementById("g200");
+
+            $(delta).hover(function() {
+                $(delta).stop()
+                    .animate({'stroke-dashoffset': 0}, 1000)
+                    .css({'opacity': 0.5, 'transition': 'opacity 0.5s'});
+                console.log('on');
+            }, function() {
+                $(delta).stop()
+                    .animate({'stroke-dashoffset': 900}, 1000)
+                    .css({'opacity': 1, 'transition': 'opacity 0.5s'});
+            });
             // add behaviour
             delta.addEventListener("mousedown",function(){
                 alert('hello world!')
