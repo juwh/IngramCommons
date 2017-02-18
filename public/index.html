@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title></title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.32.1/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.32.1/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+    </style>
+</head>
+<body>
+
+<div id='map'></div>
+<script>
+    mapboxgl.accessToken = 'pk.eyJ1IjoianV3aCIsImEiOiJjaXphOGV6c2IwMHk3MzJud3Frczl0MmY0In0.m1RBhGmdMfvJOxJogamoeQ';
+    var map = new mapboxgl.Map({
+        container: 'map', // container id
+        style: 'mapbox://styles/mapbox/streets-v9', //stylesheet location
+        center: [-86.7989, 36.1407], // starting position
+        zoom: 16.8 // starting zoom
+    });
+
+    map.on('load', function () {
+        map.addSource("houses", {
+            "type": "geojson",
+            "data": "/assets/houses.geojson"
+        });
+
+        map.addLayer({
+            "id": "houses-fills",
+            "type": "fill",
+            "source": "houses",
+            "layout": {},
+            "paint": {
+                "fill-color": "#627BC1",
+                "fill-opacity": 0
+            }
+        });
+
+        map.addLayer({
+            "id": "houses-borders",
+            "type": "line",
+            "source": "houses",
+            "layout": {},
+            "paint": {
+                "line-color": "#627BC1",
+                "line-width": 2
+            }
+        });
+
+        map.addLayer({
+            "id": "houses-fills-hover",
+            "type": "fill",
+            "source": "houses",
+            "layout": {},
+            "paint": {
+                "fill-color": "#627BC1",
+                "fill-opacity": 0.5
+            },
+            "filter": ["==", "name", ""]
+        });
+
+        // When the user moves their mouse over the page, we look for features
+        // at the mouse position (e.point) and within the states layer (states-fill).
+        // If a feature is found, then we'll update the filter in the state-fills-hover
+        // layer to only show that state, thus making a hover effect.
+        map.on("mousemove", function(e) {
+            var features = map.queryRenderedFeatures(e.point, { layers: ["houses-fills"] });
+
+            if (features.length) {
+                map.setFilter("houses-fills-hover", ["==", "name", features[0].properties.name]);
+            } else {
+                map.setFilter("houses-fills-hover", ["==", "name", ""]);
+            }
+        });
+
+        // Reset the state-fills-hover layer's filter when the mouse leaves the map
+        map.on("mouseout", function() {
+            map.setFilter("houses-fills-hover", ["==", "name", ""]);
+        });
+    });
+</script>
+
+</body>
+</html>

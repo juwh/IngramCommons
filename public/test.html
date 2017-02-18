@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+    <script
+        src="https://code.jquery.com/jquery-3.1.1.min.js"
+        integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+        crossorigin="anonymous"></script>
+    <object data="/assets/g2.svg" type="image/svg+xml" id="g2" alt="Gillette 2">
+
+    <script>
+        var a = document.getElementById("g2");
+
+        a.addEventListener("load",function(){
+
+            // get the inner DOM of alpha.svg
+            var svgDoc = a.contentDocument;
+            // get the inner element by id
+            var delta = svgDoc.getElementById("g200");
+            // add behaviour
+            delta.addEventListener("mousedown",function(){
+                alert('hello world!')
+            }, false);
+        }, false);
+    </script>
+</body>
+</html>
