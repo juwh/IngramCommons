@@ -53,9 +53,52 @@
     .btn-control:hover {
         background-color: #4ea0da;
     }
+
+     #menu {
+         background: #fff;
+         position: absolute;
+         z-index: 1;
+         top: 10px;
+         right: 10px;
+         border-radius: 3px;
+         width: 120px;
+         border: 1px solid rgba(0,0,0,0.4);
+         font-family: 'Open Sans', sans-serif;
+     }
+
+    #menu a {
+        font-size: 13px;
+        color: #404040;
+        display: block;
+        margin: 0;
+        padding: 0;
+        padding: 10px;
+        text-decoration: none;
+        border-bottom: 1px solid rgba(0,0,0,0.25);
+        text-align: center;
+    }
+
+    #menu a:last-child {
+        border: none;
+    }
+
+    #menu a:hover {
+        background-color: #f8f8f8;
+        color: #404040;
+    }
+
+    #menu a.active {
+        background-color: #3887be;
+        color: #ffffff;
+    }
+
+    #menu a.active:hover {
+        background: #3074a4;
+    }
 </style>
 
 <div id='map'></div>
+<nav id="menu"></nav>
 <pre id='info'></pre>
 <button id='zoomto' class='btn-control'>Zoom to bounds</nav></button>
 
@@ -81,120 +124,191 @@
     map.touchZoomRotate.disableRotation();
 
     map.on('load', function () {
+
         /*
-        map.addSource("houses", {
+        map.addSource("gillette", {
             "type": "geojson",
-            "data": "/assets/houses.geojson"
+            "data": "/assets/gillette/gillette.geojson"
         });
         */
 
-        map.addSource("g2", {
+        map.addSource("gillette2", {
             "type": "geojson",
-            "data": "/assets/g2geo.geojson"
+            "data": "/assets/gillette/gillette2.geojson"
+        });
+
+        map.addSource("gillette2-rooms", {
+            "type": "geojson",
+            "data": "/assets/gillette/gillette2-rooms.geojson"
+        });
+
+        map.addSource("gillette3", {
+            "type": "geojson",
+            "data": "/assets/gillette/gillette3.geojson"
+        });
+
+        map.addSource("gillette3-rooms", {
+            "type": "geojson",
+            "data": "/assets/gillette/gillette3-rooms.geojson"
+        });
+
+        /*
+        map.addLayer({
+            "id": "gillette-fills",
+            "type": "fill",
+            "source": "gillette",
+            "layout": {},
+            "paint": {
+                "fill-color": "#f0ece4",
+                "fill-opacity": 1
+            }
         });
 
         map.addLayer({
-            "id": "g2-borders",
+            "id": "gillette-borders",
             "type": "line",
-            "source": "g2",
+            "source": "gillette",
             "layout": {},
             "paint": {
-                "line-color": "#627BC1",
+                "line-color": "#bdbab5",
                 "line-width": 1
             }
         });
-
-        map.addSource("g2-rooms", {
-            "type": "geojson",
-            "data": "/assets/g2geo_rooms.geojson"
-        });
-
-        map.addLayer({
-            "id": "g2-rooms-fills",
-            "type": "fill",
-            "source": "g2-rooms",
-            "layout": {},
-            "paint": {
-                "fill-color": "#627BC1",
-                "fill-opacity": 0.5
-            }
-        });
-
-        /*
-        map.addLayer({
-            "id": "houses-fills",
-            "type": "fill",
-            "source": "houses",
-            "layout": {},
-            "paint": {
-                "fill-color": "#627BC1",
-                "fill-opacity": 0
-            }
-        });
-
-        map.addLayer({
-            "id": "houses-borders",
-            "type": "line",
-            "source": "houses",
-            "layout": {},
-            "paint": {
-                "line-color": "#627BC1",
-                "line-width": 2
-            }
-        });
-
-        map.addLayer({
-            "id": "houses-fills-hover",
-            "type": "fill",
-            "source": "houses",
-            "layout": {},
-            "paint": {
-                "fill-color": "#627BC1",
-                "fill-opacity": 0.5
-            },
-            "filter": ["==", "name", ""]
-        });
-
-
-        // When the user moves their mouse over the page, we look for features
-        // at the mouse position (e.point) and within the states layer (states-fill).
-        // If a feature is found, then we'll update the filter in the state-fills-hover
-        // layer to only show that state, thus making a hover effect.
-        map.on("mousemove", function(e) {
-            var features = map.queryRenderedFeatures(e.point, { layers: ["houses-fills"] });
-
-            if (features.length) {
-                map.setFilter("houses-fills-hover", ["==", "name", features[0].properties.name]);
-            } else {
-                map.setFilter("houses-fills-hover", ["==", "name", ""]);
-            }
-        });
-
-        // Reset the state-fills-hover layer's filter when the mouse leaves the map
-        map.on("mouseout", function() {
-            map.setFilter("houses-fills-hover", ["==", "name", ""]);
-        });
         */
 
+        map.addLayer({
+            "id": "gillette2-borders",
+            "type": "line",
+            "source": "gillette2",
+            "layout": {'visibility': 'none'},
+            "paint": {
+                "line-color": "#bdbab5",
+                "line-width": 1
+            }
+        });
+        /*
+        map.addLayer({
+            "id": "gillette2-rooms-fills",
+            "type": "fill",
+            "source": "gillette2-rooms",
+            "layout": {},
+            "paint": {
+                "fill-color": "#627BC1",
+                "fill-opacity": 0.5
+            }
+        });
+        */
+        map.addLayer({
+            "id": "gillette3-borders",
+            "type": "line",
+            "source": "gillette3",
+            "layout": {'visibility': 'none'},
+            "paint": {
+                "line-color": "#bdbab5",
+                "line-width": 1
+            }
+        });
+        /*
+        map.addLayer({
+            "id": "gillette3-rooms-fills",
+            "type": "fill",
+            "source": "gillette3-rooms",
+            "layout": {},
+            "paint": {
+                "fill-color": "#627BC1",
+                "fill-opacity": 0.5
+            }
+        });
+        */
         map.on('mousemove', function (e) {
             document.getElementById('info').innerHTML =
                 // e.point is the x, y coordinates of the mousemove event relative
                 // to the top-left corner of the map
                 JSON.stringify(e.point) + '<br />' +
                 // e.lngLat is the longitude, latitude geographical position of the event
-                JSON.stringify(e.lngLat);
+                JSON.stringify(e.lngLat) + '<br />' + map.getZoom();
         });
 
-        var g2;
-        $.getJSON("/assets/g2geo.geojson", function(e) {
-            g2 = e;
-            let bbox = turf.bbox(g2);
+        var gillette;
+        $.getJSON("/assets/gillette/gillette.geojson", function(e) {
+            map.addSource("gillette", {
+                "type": "geojson",
+                "data": e
+            });
+            map.addLayer({
+                "id": "gillette-fills",
+                "type": "fill",
+                "source": "gillette",
+                "layout": {},
+                "paint": {
+                    "fill-color": "#f0ece4",
+                    "fill-opacity": 1
+                }
+            });
+
+            map.addLayer({
+                "id": "gillette-borders",
+                "type": "line",
+                "source": "gillette",
+                "layout": {},
+                "paint": {
+                    "line-color": "#bdbab5",
+                    "line-width": 1
+                }
+            });
+            gillette = e;
+            let bbox = turf.bbox(gillette);
             document.getElementById('zoomto').addEventListener('click', function() {
 
                 map.fitBounds(bbox, {padding: 30});
             });
         });
 
+        map.on('click', function (e) {
+            var features = map.queryRenderedFeatures(e.point, { layers: ["gillette-fills"] });
+            console.log(features);
+        });
+
+        /*
+        map.on("click", function(e) {
+            var features = map.queryRenderedFeatures(e.point, { layers: ["gillette-fills"] });
+            if (features.length) {
+                let bbox = turf.bbox(gillette);
+                map.fitBounds(bbox, {padding: 30});
+            }
+        });
+        */
+
+        var toggleableLayerIds = [ 'gillette2-borders', 'gillette3-borders' ];
+        var toggleableLayerNames = [ '2', '3' ];
+
+        for (var i = 0; i < toggleableLayerIds.length; i++) {
+            var id = toggleableLayerIds[i];
+
+            var link = document.createElement('a');
+            link.href = '#';
+            link.className = '';
+            link.textContent = id;
+
+            link.onclick = function (e) {
+                var clickedLayer = this.textContent;
+                e.preventDefault();
+                e.stopPropagation();
+
+                var visibility = map.getLayoutProperty(clickedLayer, 'visibility');
+
+                if (visibility === 'visible') {
+                    map.setLayoutProperty(clickedLayer, 'visibility', 'none');
+                    this.className = '';
+                } else {
+                    this.className = 'active';
+                    map.setLayoutProperty(clickedLayer, 'visibility', 'visible');
+                }
+            };
+
+            var layers = document.getElementById('menu');
+            layers.appendChild(link);
+        }
     });
 </script>
 

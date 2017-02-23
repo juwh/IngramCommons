@@ -1,51 +1,260 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
+    <meta charset='utf-8' />
     <title></title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script
+            src="https://code.jquery.com/jquery-3.1.1.min.js"
+            integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+            crossorigin="anonymous"></script>
+    <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script>
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.32.1/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.32.1/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+    </style>
 </head>
 <body>
-    <script
-        src="https://code.jquery.com/jquery-3.1.1.min.js"
-        integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
-        crossorigin="anonymous"></script>
-    <div id="floors">
-        <object data="/assets/g2.svg" type="image/svg+xml" id="g2" alt="Gillette 2"></object>
-    </div>
 
-    <script>
-        var a = document.getElementById("g2");
+<style type='text/css'>
+    #info {
+        display: block;
+        position: relative;
+        margin: 0px auto;
+        width: 50%;
+        padding: 10px;
+        border: none;
+        border-radius: 3px;
+        font-size: 12px;
+        text-align: center;
+        color: #222;
+        background: #fff;
+    }
 
-        $(a).ready(function(){
+    #menu {
+        background: #fff;
+        position: absolute;
+        z-index: 1;
+        top: 10px;
+        right: 10px;
+        border-radius: 3px;
+        width: 120px;
+        border: 1px solid rgba(0,0,0,0.4);
+        font-family: 'Open Sans', sans-serif;
+    }
 
-            // get the inner DOM of alpha.svg
-            var svgDoc = a.contentDocument;
+    #menu a {
+        font-size: 13px;
+        color: #404040;
+        display: block;
+        margin: 0;
+        padding: 0;
+        padding: 10px;
+        text-decoration: none;
+        border-bottom: 1px solid rgba(0,0,0,0.25);
+        text-align: center;
+    }
 
-            $( svgDoc ).on( "mouseenter", "path", function( event ) {
-                let elem = $( this );
-                if ( $(elem).is(".dbl") || $(elem).is(".sgl") ) {
-                    $(elem).stop()
-                        .animate({'stroke-dashoffset': 0}, 1000)
-                        .css({'opacity': 1, 'transition': 'opacity 0.1s'});
-                }
+    #menu a:last-child {
+        border: none;
+    }
+
+    #menu a:hover {
+        background-color: #f8f8f8;
+        color: #404040;
+    }
+
+    #menu a.active {
+        background-color: #3887be;
+        color: #ffffff;
+    }
+
+    #menu a.active:hover {
+        background: #3074a4;
+    }
+</style>
+
+<div id='map'></div>
+<nav id="menu"></nav>
+<pre id='info'></pre>
+
+<script>
+    let bounds = [
+        [-86.8327, 36.1310], // Southwest coordinates
+        [-86.7770, 36.1560]  // Northeast coordinates
+    ];
+    let buildings = ['gillette', 'memorial']; // SQL query?
+    let floors = new Map();
+    let roomMap = new Map();
+    // SQL query
+    let roomTypes = ['DBL', 'FOYER', 'CORR', 'TLT', 'SGL', 'HSKPG', 'ELEC', 'STOR', 'COMM', 'BA'];
+    roomMap.set("DBL", "#99AAB3");
+    roomMap.set("FOYER", "#A7B88E");
+    roomMap.set("CORR", "#C9D38B");
+    roomMap.set("TLT", "#ECCB82");
+    roomMap.set("BA", "#ECCB82");
+    roomMap.set("SGL", "#8D9A64");
+    roomMap.set("HSKPG", "#D4AFB9");
+    roomMap.set("ELEC", "#D4AFB9");
+    roomMap.set("STOR", "#D4AFB9");
+    roomMap.set("COMM", "#D4AFB9");
+    let initialized = new Map();
+    buildings.forEach((name)=>{
+        floors.set(name, 6); // SQL query?
+        initialized.set(name, false);
+    });
+
+    mapboxgl.accessToken = 'pk.eyJ1IjoianV3aCIsImEiOiJjaXphOGV6c2IwMHk3MzJud3Frczl0MmY0In0.m1RBhGmdMfvJOxJogamoeQ';
+    let map = new mapboxgl.Map({
+        container: 'map', // container id
+        style: 'mapbox://styles/mapbox/streets-v9', //stylesheet location
+        center: [-86.7989, 36.1407], // starting position
+        zoom: 16.8, // starting zoom
+        maxBounds: bounds // Sets bounds as max
+    });
+
+    // disable map rotation using right click + drag
+    map.dragRotate.disable();
+    // disable map rotation using touch rotation gesture
+    map.touchZoomRotate.disableRotation();
+
+    function initMap(buildings, floors, roomMap, roomTypes, initialized) {
+        buildings.forEach((name) => {
+            $.getJSON('/assets/' + name + '/' + name + '.geojson', function (data) {
+                map.addSource(name, {
+                    "type": "geojson",
+                    "data": data
+                });
+                map.addLayer({
+                    "id": name + "-fills",
+                    "type": "fill",
+                    "source": name,
+                    "layout": {},
+                    "paint": {
+                        "fill-color": "#f0ece4",
+                        "fill-opacity": 1
+                    }
+                });
+                map.addLayer({
+                    "id": name + "-borders",
+                    "type": "line",
+                    "source": name,
+                    "layout": {},
+                    "paint": {
+                        "line-color": "#bdbab5",
+                        "line-width": 1
+                    }
+                });
+                let bbox = turf.bbox(data);
+                map.on("click", function(e) {
+                    let features = map.queryRenderedFeatures(e.point, {layers: [name + "-fills"]});
+                    console.log(features);
+                    if (features.length) {
+                        console.log(name);
+                        if (!initialized.get(name)){
+                            initBuilding(name, floors, roomMap, roomTypes);
+                            initialized.set(name, true);
+                        }
+                        map.fitBounds(bbox, {padding: 40});
+                    }
+                });
             });
+        });
+    }
 
-            $( svgDoc ).on( "mouseleave", "path", function( event ) {
-                let elem = $( this );
-                if ( $(elem).is(".dbl") || $(elem).is(".sgl") ) {
-                    $(elem).stop()
-                        .animate({'stroke-dashoffset': 900}, 1000)
-                        .css({'opacity': 0.5, 'transition': 'opacity 0.1s'});
-                }
+    function initBuilding(name, floors, roomMap, roomTypes) {
+        for (let i = 2; i <= floors.get(name); i++) {
+            $.getJSON('/assets/' + name + '/' + name + i +'.geojson', function (data) {
+                map.addSource(name + i, {
+                    "type": "geojson",
+                    "data": data
+                });
+                map.addLayer({
+                    "id": name + i + "-borders",
+                    "type": "line",
+                    "source": name + i,
+                    "layout": {'visibility': 'none'},
+                    "paint": {
+                        "line-color": "#bdbab5",
+                        "line-width": 1
+                    }
+                });
             });
+            $.getJSON('/assets/' + name + '/' + name + i +'-rooms.geojson', function (rooms) {
+                map.addSource(name + i + '-rooms', {
+                    "type": "geojson",
+                    "data": rooms
+                });
+                roomTypes.forEach((type)=>{
+                    map.addLayer({
+                        "id": name + i + '-' + type,
+                        "type": "fill",
+                        "source": name + i + '-rooms',
+                        "layout": {'visibility': 'none'},
+                        "paint": {
+                            "fill-color": roomMap.get(type),
+                            "fill-opacity": 0.5
+                        },
+                        "filter": ["==", "class", type]
+                    });
+                })
+            });
+        }
+    }
 
-            $( svgDoc ).on( "click", "path", function( event ) {
-                let elem = $( this );
-                if ( !$(elem).is(".floor") ) {
-                    alert('hello world!');
+    map.on('load', function () {
+        initMap(buildings, floors, roomMap, roomTypes, initialized);
+
+        map.on('mousemove', function (e) {
+            document.getElementById('info').innerHTML =
+                // e.point is the x, y coordinates of the mousemove event relative
+                // to the top-left corner of the map
+                JSON.stringify(e.point) + '<br />' +
+                // e.lngLat is the longitude, latitude geographical position of the event
+                JSON.stringify(e.lngLat) + '<br />' + map.getZoom();
+        });
+
+        let toggleableLayerIds = [ '2', '3' ];
+
+        for (let i = 0; i < toggleableLayerIds.length; i++) {
+            let id = toggleableLayerIds[i];
+
+            let link = document.createElement('a');
+            link.href = '#';
+            link.className = '';
+            link.textContent = id;
+
+            link.onclick = function (e) {
+                let clickedLayer = this.textContent;
+                let clickedBase = 'gillette' + clickedLayer + '-borders';
+                let clickedRooms = 'gillette' + clickedLayer + '-';
+                e.preventDefault();
+                e.stopPropagation();
+                
+                let visibility = map.getLayoutProperty(clickedBase, 'visibility');
+
+                if (visibility === 'visible') {
+                    map.setLayoutProperty(clickedBase, 'visibility', 'none');
+                    roomTypes.forEach((type)=>{
+                        map.setLayoutProperty(clickedRooms + type, 'visibility', 'none');
+                    });
+                    this.className = '';
+                } else {
+                    this.className = 'active';
+                    map.setLayoutProperty(clickedBase, 'visibility', 'visible');
+                    roomTypes.forEach((type)=>{
+                        map.setLayoutProperty(clickedRooms + type, 'visibility', 'visible');
+                    });
                 }
-            });
-        }, false);
-    </script>
+            };
+
+            let layers = document.getElementById('menu');
+            layers.appendChild(link);
+        }
+    });
+</script>
+
 </body>
 </html>
