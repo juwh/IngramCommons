@@ -43,6 +43,7 @@
         width: 120px;
         border: 1px solid rgba(0,0,0,0.4);
         font-family: 'Open Sans', sans-serif;
+        display: none;
     }
 
     #menu a {
@@ -77,7 +78,7 @@
 </style>
 
 <div id='map'></div>
-<nav id="menu"></nav>
+<div id="menu"></div>
 <pre id='info'></pre>
 
 <script>
@@ -86,6 +87,7 @@
         [-86.7770, 36.1560]  // Northeast coordinates
     ];
     let buildings = ['gillette', 'memorial']; // SQL query?
+    let selected = null;
     let floors = new Map();
     let roomMap = new Map();
     // SQL query
@@ -101,8 +103,9 @@
     roomMap.set("STOR", "#D4AFB9");
     roomMap.set("COMM", "#D4AFB9");
     let initialized = new Map();
+    floors.set("gillette", 3); // SQL query?
+    floors.set("memorial", 2); // SQL query?
     buildings.forEach((name)=>{
-        floors.set(name, 6); // SQL query?
         initialized.set(name, false);
     });
 
@@ -120,7 +123,7 @@
     // disable map rotation using touch rotation gesture
     map.touchZoomRotate.disableRotation();
 
-    function initMap(buildings, floors, roomMap, roomTypes, initialized) {
+    function initMap(buildings, floors, roomMap, roomTypes, initialized, selected) {
         buildings.forEach((name) => {
             $.getJSON('/assets/' + name + '/' + name + '.geojson', function (data) {
                 map.addSource(name, {
@@ -153,9 +156,16 @@
                     console.log(features);
                     if (features.length) {
                         console.log(name);
-                        if (!initialized.get(name)){
-                            initBuilding(name, floors, roomMap, roomTypes);
-                            initialized.set(name, true);
+                        if (selected != name) {
+                            deinitFloor(selected, roomTypes);
+                            selected = name;
+                            buildNav(name, floors, roomTypes);
+                            if (initialized.get(name)) {
+                                initFloor(name, roomTypes);
+                            } else {
+                                initBuilding(name, floors, roomMap, roomTypes);
+                                initialized.set(name, true);
+                            }
                         }
                         map.fitBounds(bbox, {padding: 40});
                     }
@@ -164,7 +174,31 @@
         });
     }
 
+    function initFloor(name, roomTypes) {
+        let startFloor = $( "#menu a" ).first()[0];
+        console.log(startFloor);
+        startFloor.className = 'active';
+        map.setLayoutProperty(name + startFloor.textContent + '-borders', 'visibility', 'visible');
+        roomTypes.forEach((type)=>{
+            map.setLayoutProperty(name + startFloor.textContent + '-' + type, 'visibility', 'visible');
+        });
+    }
+
+    function deinitFloor(name, roomTypes) {
+        let active = $( '#menu' ).find('.active');
+        if (active.length) {
+            let activeLevel = active[0].textContent;
+            active[0].className = '';
+            map.setLayoutProperty(name + activeLevel + '-borders', 'visibility', 'none');
+            roomTypes.forEach((type)=>{
+                map.setLayoutProperty(name + activeLevel + '-' + type, 'visibility', 'none');
+            });
+        }
+    }
+
     function initBuilding(name, floors, roomMap, roomTypes) {
+        let count = 0;
+        let loaded = (floors.get(name) - 1) * 2;
         for (let i = 2; i <= floors.get(name); i++) {
             $.getJSON('/assets/' + name + '/' + name + i +'.geojson', function (data) {
                 map.addSource(name + i, {
@@ -181,6 +215,10 @@
                         "line-width": 1
                     }
                 });
+                count++;
+                if (count === loaded) {
+                    initFloor(name, roomTypes);
+                }
             });
             $.getJSON('/assets/' + name + '/' + name + i +'-rooms.geojson', function (rooms) {
                 map.addSource(name + i + '-rooms', {
@@ -199,13 +237,59 @@
                         },
                         "filter": ["==", "class", type]
                     });
-                })
+                });
+                count++;
+                if (count === loaded) {
+                    initFloor(name, roomTypes);
+                }
             });
         }
     }
 
+    function buildNav(name, floors, roomTypes) {
+        let start = 2;
+        $('#menu').show();
+        let layers = document.getElementById('menu');
+        $(layers).empty();
+
+        for (let i = start; i <= floors.get(name); i++) {
+            let level = i;
+
+            let link = document.createElement('a');
+            link.href = '#';
+            link.className = '';
+            link.textContent = level;
+
+            link.onclick = function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                let active = $( '#menu' ).find('.active')[0];
+                let activeLevel = active.textContent;
+                let clickedLayer = this.textContent;
+                let clickedBase = name + clickedLayer + '-borders';
+                let clickedRooms = name + clickedLayer + '-';
+
+                let visibility = map.getLayoutProperty(clickedBase, 'visibility');
+
+                if (clickedLayer != activeLevel) {
+                    active.className = '';
+                    map.setLayoutProperty(name + activeLevel + '-borders', 'visibility', 'none');
+                    roomTypes.forEach((type)=>{
+                        map.setLayoutProperty(name + activeLevel + '-' + type, 'visibility', 'none');
+                    });
+                    this.className = 'active';
+                    map.setLayoutProperty(clickedBase, 'visibility', 'visible');
+                    roomTypes.forEach((type)=>{
+                        map.setLayoutProperty(clickedRooms + type, 'visibility', 'visible');
+                    });
+                }
+            };
+            layers.appendChild(link);
+        }
+    }
+
     map.on('load', function () {
-        initMap(buildings, floors, roomMap, roomTypes, initialized);
+        initMap(buildings, floors, roomMap, roomTypes, initialized, selected);
 
         map.on('mousemove', function (e) {
             document.getElementById('info').innerHTML =
@@ -215,44 +299,6 @@
                 // e.lngLat is the longitude, latitude geographical position of the event
                 JSON.stringify(e.lngLat) + '<br />' + map.getZoom();
         });
-
-        let toggleableLayerIds = [ '2', '3' ];
-
-        for (let i = 0; i < toggleableLayerIds.length; i++) {
-            let id = toggleableLayerIds[i];
-
-            let link = document.createElement('a');
-            link.href = '#';
-            link.className = '';
-            link.textContent = id;
-
-            link.onclick = function (e) {
-                let clickedLayer = this.textContent;
-                let clickedBase = 'gillette' + clickedLayer + '-borders';
-                let clickedRooms = 'gillette' + clickedLayer + '-';
-                e.preventDefault();
-                e.stopPropagation();
-                
-                let visibility = map.getLayoutProperty(clickedBase, 'visibility');
-
-                if (visibility === 'visible') {
-                    map.setLayoutProperty(clickedBase, 'visibility', 'none');
-                    roomTypes.forEach((type)=>{
-                        map.setLayoutProperty(clickedRooms + type, 'visibility', 'none');
-                    });
-                    this.className = '';
-                } else {
-                    this.className = 'active';
-                    map.setLayoutProperty(clickedBase, 'visibility', 'visible');
-                    roomTypes.forEach((type)=>{
-                        map.setLayoutProperty(clickedRooms + type, 'visibility', 'visible');
-                    });
-                }
-            };
-
-            let layers = document.getElementById('menu');
-            layers.appendChild(link);
-        }
     });
 </script>
 
