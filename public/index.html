@@ -19,52 +19,40 @@
 <body>
 
 <style type='text/css'>
-    #info {
-        display: block;
-        position: relative;
-        margin: 0px auto;
-        width: 50%;
-        padding: 10px;
-        border: none;
-        border-radius: 3px;
-        font-size: 12px;
-        text-align: center;
-        color: #222;
-        background: #fff;
-    }
-
-    .btn-control {
-        font:bold 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
-        background-color: #3386c0;
-        color: #fff;
+    .filter-ctrl {
         position: absolute;
-        top: 60px;
-        left: 50%;
+        top: 20px;
+        left: 20px;
         z-index: 1;
-        border: none;
-        width: 200px;
-        margin-left:-100px;
-        display: block;
-        cursor: pointer;
-        padding: 10px 20px;
+        width: 400px;
+    }
+
+    .filter-ctrl input[type=text] {
+        font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+        width: 100%;
+        border: 0;
+        background-color: #fff;
+        margin: 0;
+        color: rgba(0,0,0,.5);
+        padding: 10px;
+        box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.2);
+        /* box-shadow: 0 0 0 2px rgba(0,0,0,0.1); */
         border-radius: 3px;
     }
 
-    .btn-control:hover {
-        background-color: #4ea0da;
+    #menu {
+        background: #fff;
+        position: absolute;
+        z-index: 1;
+        top: 20px;
+        right: 20px;
+        border-radius: 3px;
+        width: 44px;
+        box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.2);
+        /* border: 1px solid rgba(0,0,0,0.4); */
+        font-family: 'Open Sans', sans-serif;
+        display: none;
     }
-
-     #menu {
-         background: #fff;
-         position: absolute;
-         z-index: 1;
-         top: 10px;
-         right: 10px;
-         border-radius: 3px;
-         width: 120px;
-         border: 1px solid rgba(0,0,0,0.4);
-         font-family: 'Open Sans', sans-serif;
-     }
 
     #menu a {
         font-size: 13px;
@@ -98,217 +86,240 @@
 </style>
 
 <div id='map'></div>
-<nav id="menu"></nav>
-<pre id='info'></pre>
-<button id='zoomto' class='btn-control'>Zoom to bounds</nav></button>
+<div class='filter-ctrl'>
+    <input id='filter-input' type='text' name='filter' placeholder='Search' />
+</div>
+<div id="menu"></div>
 
 <script>
-    var bounds = [
+    let bounds = [
         [-86.8327, 36.1310], // Southwest coordinates
         [-86.7770, 36.1560]  // Northeast coordinates
     ];
+    let buildings = ['gillette', 'memorial']; // SQL query?
+    let selected = null;
+    let floorsMin = new Map();
+    let floorsMax = new Map();
+    let roomMap = new Map();
+    // SQL query
+    let roomTypes = ['DBL', 'FOYER', 'CORR', 'TLT', 'SGL', 'HSKPG', 'ELEC', 'STOR', 'COMM', 'BA', 'MBR', 'BATH', 'BR', 'CLOSET', 'KITCHEN', 'HR_OFF'];
+    roomMap.set("DBL", "#99AAB3");
+    roomMap.set("SGL", "#8D9A64");
+    roomMap.set("FOYER", "#A7B88E");
+    roomMap.set("KITCHEN", "#A7B88E");
+    roomMap.set("MBR", "#A7B88E");
+    roomMap.set("BR", "#A7B88E");
+    roomMap.set("CORR", "#C9D38B");
+    roomMap.set("TLT", "#ECCB82");
+    roomMap.set("BA", "#ECCB82");
+    roomMap.set("BATH", "#ECCB82");
+    roomMap.set("CLOSET", "#D4AFB9");
+    roomMap.set("HSKPG", "#D4AFB9");
+    roomMap.set("ELEC", "#D4AFB9");
+    roomMap.set("STOR", "#D4AFB9");
+    roomMap.set("COMM", "#D4AFB9");
+    roomMap.set("HR_OFF", "#D4AFB9");
+    let initialized = new Map();
+    floorsMin.set("gillette", 2);
+    floorsMin.set("memorial", 2);
+    floorsMax.set("gillette", 3); // SQL query?
+    floorsMax.set("memorial", 5); // SQL query?
+    buildings.forEach((name)=>{
+        initialized.set(name, false);
+    });
 
     mapboxgl.accessToken = 'pk.eyJ1IjoianV3aCIsImEiOiJjaXphOGV6c2IwMHk3MzJud3Frczl0MmY0In0.m1RBhGmdMfvJOxJogamoeQ';
-    var map = new mapboxgl.Map({
+    let map = new mapboxgl.Map({
         container: 'map', // container id
         style: 'mapbox://styles/mapbox/streets-v9', //stylesheet location
         center: [-86.7989, 36.1407], // starting position
         zoom: 16.8, // starting zoom
         maxBounds: bounds // Sets bounds as max
     });
-
+    map.getCanvas().style.cursor = 'default';
     // disable map rotation using right click + drag
     map.dragRotate.disable();
-
     // disable map rotation using touch rotation gesture
     map.touchZoomRotate.disableRotation();
 
-    map.on('load', function () {
-
-        /*
-        map.addSource("gillette", {
-            "type": "geojson",
-            "data": "/assets/gillette/gillette.geojson"
-        });
-        */
-
-        map.addSource("gillette2", {
-            "type": "geojson",
-            "data": "/assets/gillette/gillette2.geojson"
-        });
-
-        map.addSource("gillette2-rooms", {
-            "type": "geojson",
-            "data": "/assets/gillette/gillette2-rooms.geojson"
-        });
-
-        map.addSource("gillette3", {
-            "type": "geojson",
-            "data": "/assets/gillette/gillette3.geojson"
-        });
-
-        map.addSource("gillette3-rooms", {
-            "type": "geojson",
-            "data": "/assets/gillette/gillette3-rooms.geojson"
-        });
-
-        /*
-        map.addLayer({
-            "id": "gillette-fills",
-            "type": "fill",
-            "source": "gillette",
-            "layout": {},
-            "paint": {
-                "fill-color": "#f0ece4",
-                "fill-opacity": 1
-            }
-        });
-
-        map.addLayer({
-            "id": "gillette-borders",
-            "type": "line",
-            "source": "gillette",
-            "layout": {},
-            "paint": {
-                "line-color": "#bdbab5",
-                "line-width": 1
-            }
-        });
-        */
-
-        map.addLayer({
-            "id": "gillette2-borders",
-            "type": "line",
-            "source": "gillette2",
-            "layout": {'visibility': 'none'},
-            "paint": {
-                "line-color": "#bdbab5",
-                "line-width": 1
-            }
-        });
-        /*
-        map.addLayer({
-            "id": "gillette2-rooms-fills",
-            "type": "fill",
-            "source": "gillette2-rooms",
-            "layout": {},
-            "paint": {
-                "fill-color": "#627BC1",
-                "fill-opacity": 0.5
-            }
-        });
-        */
-        map.addLayer({
-            "id": "gillette3-borders",
-            "type": "line",
-            "source": "gillette3",
-            "layout": {'visibility': 'none'},
-            "paint": {
-                "line-color": "#bdbab5",
-                "line-width": 1
-            }
-        });
-        /*
-        map.addLayer({
-            "id": "gillette3-rooms-fills",
-            "type": "fill",
-            "source": "gillette3-rooms",
-            "layout": {},
-            "paint": {
-                "fill-color": "#627BC1",
-                "fill-opacity": 0.5
-            }
-        });
-        */
-        map.on('mousemove', function (e) {
-            document.getElementById('info').innerHTML =
-                // e.point is the x, y coordinates of the mousemove event relative
-                // to the top-left corner of the map
-                JSON.stringify(e.point) + '<br />' +
-                // e.lngLat is the longitude, latitude geographical position of the event
-                JSON.stringify(e.lngLat) + '<br />' + map.getZoom();
-        });
-
-        var gillette;
-        $.getJSON("/assets/gillette/gillette.geojson", function(e) {
-            map.addSource("gillette", {
-                "type": "geojson",
-                "data": e
+    function initMap(buildings, floorsMin, floorsMax, roomMap, roomTypes, initialized, selected) {
+        buildings.forEach((name) => {
+            $.getJSON('/assets/' + name + '/' + name + '.geojson', function (data) {
+                map.addSource(name, {
+                    "type": "geojson",
+                    "data": data
+                });
+                map.addLayer({
+                    "id": name + "-fills",
+                    "type": "fill",
+                    "source": name,
+                    "layout": {},
+                    "paint": {
+                        "fill-color": "#f0ece4",
+                        "fill-opacity": 1
+                    }
+                });
+                map.addLayer({
+                    "id": name + "-borders",
+                    "type": "line",
+                    "source": name,
+                    "layout": {},
+                    "paint": {
+                        "line-color": "#bdbab5",
+                        "line-width": 1
+                    }
+                });
+                let bbox = turf.bbox(data);
+                map.on("click", function(e) {
+                    let features = map.queryRenderedFeatures(e.point, {layers: [name + "-fills"]});
+                    console.log(features);
+                    if (features.length) {
+                        console.log(name);
+                        if (selected != name) {
+                            map.fitBounds(bbox, {padding: 40});
+                            deinitFloor(selected, roomTypes);
+                            selected = name;
+                            buildNav(name, floorsMin, floorsMax, roomTypes);
+                            if (initialized.get(name)) {
+                                initFloor(name, roomTypes);
+                            } else {
+                                initBuilding(name, floorsMin, floorsMax, roomMap, roomTypes);
+                                initialized.set(name, true);
+                            }
+                        }
+                    }
+                });
             });
-            map.addLayer({
-                "id": "gillette-fills",
-                "type": "fill",
-                "source": "gillette",
-                "layout": {},
-                "paint": {
-                    "fill-color": "#f0ece4",
-                    "fill-opacity": 1
+        });
+    }
+
+    let moveHandler = () => map.getCanvas().style.cursor = 'move';
+    map.on('mousedown', () => {
+        map.on('mousemove', moveHandler)
+    }).on('mouseup', () => {
+        map.off('mousemove', moveHandler);
+        map.getCanvas().style.cursor = 'default';
+    });
+
+    function initFloor(name, roomTypes) {
+        let startFloor = $( "#menu a" ).first()[0];
+        startFloor.className = 'active';
+        map.setLayoutProperty(name + startFloor.textContent + '-borders', 'visibility', 'visible');
+        roomTypes.forEach((type)=>{
+            map.setLayoutProperty(name + startFloor.textContent + '-' + type, 'visibility', 'visible');
+        });
+    }
+
+    function deinitFloor(name, roomTypes) {
+        let active = $( '#menu' ).find('.active');
+        if (active.length) {
+            let activeLevel = active[0].textContent;
+            active[0].className = '';
+            map.setLayoutProperty(name + activeLevel + '-borders', 'visibility', 'none');
+            roomTypes.forEach((type)=>{
+                map.setLayoutProperty(name + activeLevel + '-' + type, 'visibility', 'none');
+            });
+        }
+    }
+
+    function initBuilding(name, floorsMin, floorsMax, roomMap, roomTypes) {
+        let count = 0;
+        let loaded = (floorsMax.get(name) - floorsMin.get(name) + 1) * 2;
+        for (let i = floorsMin.get(name); i <= floorsMax.get(name); i++) {
+            $.getJSON('/assets/' + name + '/' + name + i +'.geojson', function (data) {
+                map.addSource(name + i, {
+                    "type": "geojson",
+                    "data": data
+                });
+                map.addLayer({
+                    "id": name + i + "-borders",
+                    "type": "line",
+                    "source": name + i,
+                    "layout": {'visibility': 'none'},
+                    "paint": {
+                        "line-color": "#bdbab5",
+                        "line-width": 1
+                    }
+                });
+                count++;
+                if (count === loaded) {
+                    initFloor(name, roomTypes);
                 }
             });
-
-            map.addLayer({
-                "id": "gillette-borders",
-                "type": "line",
-                "source": "gillette",
-                "layout": {},
-                "paint": {
-                    "line-color": "#bdbab5",
-                    "line-width": 1
+            $.getJSON('/assets/' + name + '/' + name + i +'-rooms.geojson', function (rooms) {
+                map.addSource(name + i + '-rooms', {
+                    "type": "geojson",
+                    "data": rooms
+                });
+                roomTypes.forEach((type)=>{
+                    map.addLayer({
+                        "id": name + i + '-' + type,
+                        "type": "fill",
+                        "source": name + i + '-rooms',
+                        "layout": {'visibility': 'none'},
+                        "paint": {
+                            "fill-color": roomMap.get(type),
+                            "fill-opacity": 0.5
+                        },
+                        "filter": ["==", "class", type]
+                    });
+                });
+                count++;
+                if (count === loaded) {
+                    initFloor(name, roomTypes);
                 }
             });
-            gillette = e;
-            let bbox = turf.bbox(gillette);
-            document.getElementById('zoomto').addEventListener('click', function() {
-
-                map.fitBounds(bbox, {padding: 30});
-            });
-        });
-
-        map.on('click', function (e) {
-            var features = map.queryRenderedFeatures(e.point, { layers: ["gillette-fills"] });
-            console.log(features);
-        });
-
-        /*
+        }
         map.on("click", function(e) {
-            var features = map.queryRenderedFeatures(e.point, { layers: ["gillette-fills"] });
-            if (features.length) {
-                let bbox = turf.bbox(gillette);
-                map.fitBounds(bbox, {padding: 30});
-            }
+            let features = map.queryRenderedFeatures(e.point, { filter: ["in", "class", "DBL", "SGL"]});
+            console.log(features[0]);
         });
-        */
+    }
 
-        var toggleableLayerIds = [ 'gillette2-borders', 'gillette3-borders' ];
-        var toggleableLayerNames = [ '2', '3' ];
+    function buildNav(name, floorsMin, floorsMax, roomTypes) {
+        let start = floorsMin.get(name);
+        $('#menu').show();
+        let layers = document.getElementById('menu');
+        $(layers).empty();
 
-        for (var i = 0; i < toggleableLayerIds.length; i++) {
-            var id = toggleableLayerIds[i];
+        for (let i = start; i <= floorsMax.get(name); i++) {
+            let level = i;
 
-            var link = document.createElement('a');
+            let link = document.createElement('a');
             link.href = '#';
             link.className = '';
-            link.textContent = id;
+            link.textContent = level;
 
             link.onclick = function (e) {
-                var clickedLayer = this.textContent;
                 e.preventDefault();
                 e.stopPropagation();
+                let active = $( '#menu' ).find('.active')[0];
+                let activeLevel = active.textContent;
+                let clickedLayer = this.textContent;
+                let clickedBase = name + clickedLayer + '-borders';
+                let clickedRooms = name + clickedLayer + '-';
 
-                var visibility = map.getLayoutProperty(clickedLayer, 'visibility');
+                let visibility = map.getLayoutProperty(clickedBase, 'visibility');
 
-                if (visibility === 'visible') {
-                    map.setLayoutProperty(clickedLayer, 'visibility', 'none');
-                    this.className = '';
-                } else {
+                if (clickedLayer != activeLevel) {
+                    active.className = '';
+                    map.setLayoutProperty(name + activeLevel + '-borders', 'visibility', 'none');
+                    roomTypes.forEach((type)=>{
+                        map.setLayoutProperty(name + activeLevel + '-' + type, 'visibility', 'none');
+                    });
                     this.className = 'active';
-                    map.setLayoutProperty(clickedLayer, 'visibility', 'visible');
+                    map.setLayoutProperty(clickedBase, 'visibility', 'visible');
+                    roomTypes.forEach((type)=>{
+                        map.setLayoutProperty(clickedRooms + type, 'visibility', 'visible');
+                    });
                 }
             };
-
-            var layers = document.getElementById('menu');
             layers.appendChild(link);
         }
+    }
+
+    map.on('load', function () {
+        initMap(buildings, floorsMin, floorsMax, roomMap, roomTypes, initialized, selected);
     });
 </script>
 

@@ -88,23 +88,32 @@
     ];
     let buildings = ['gillette', 'memorial']; // SQL query?
     let selected = null;
-    let floors = new Map();
+    let floorsMin = new Map();
+    let floorsMax = new Map();
     let roomMap = new Map();
     // SQL query
-    let roomTypes = ['DBL', 'FOYER', 'CORR', 'TLT', 'SGL', 'HSKPG', 'ELEC', 'STOR', 'COMM', 'BA'];
+    let roomTypes = ['DBL', 'FOYER', 'CORR', 'TLT', 'SGL', 'HSKPG', 'ELEC', 'STOR', 'COMM', 'BA', 'MBR', 'BATH', 'BR', 'CLOSET', 'KITCHEN', 'HR_OFF'];
     roomMap.set("DBL", "#99AAB3");
+    roomMap.set("SGL", "#8D9A64");
     roomMap.set("FOYER", "#A7B88E");
+    roomMap.set("KITCHEN", "#A7B88E");
+    roomMap.set("MBR", "#A7B88E");
+    roomMap.set("BR", "#A7B88E");
     roomMap.set("CORR", "#C9D38B");
     roomMap.set("TLT", "#ECCB82");
     roomMap.set("BA", "#ECCB82");
-    roomMap.set("SGL", "#8D9A64");
+    roomMap.set("BATH", "#ECCB82");
+    roomMap.set("CLOSET", "#D4AFB9");
     roomMap.set("HSKPG", "#D4AFB9");
     roomMap.set("ELEC", "#D4AFB9");
     roomMap.set("STOR", "#D4AFB9");
     roomMap.set("COMM", "#D4AFB9");
+    roomMap.set("HR_OFF", "#D4AFB9");
     let initialized = new Map();
-    floors.set("gillette", 3); // SQL query?
-    floors.set("memorial", 2); // SQL query?
+    floorsMin.set("gillette", 2);
+    floorsMin.set("memorial", 2);
+    floorsMax.set("gillette", 3); // SQL query?
+    floorsMax.set("memorial", 5); // SQL query?
     buildings.forEach((name)=>{
         initialized.set(name, false);
     });
@@ -123,7 +132,7 @@
     // disable map rotation using touch rotation gesture
     map.touchZoomRotate.disableRotation();
 
-    function initMap(buildings, floors, roomMap, roomTypes, initialized, selected) {
+    function initMap(buildings, floorsMin, floorsMax, roomMap, roomTypes, initialized, selected) {
         buildings.forEach((name) => {
             $.getJSON('/assets/' + name + '/' + name + '.geojson', function (data) {
                 map.addSource(name, {
@@ -157,17 +166,17 @@
                     if (features.length) {
                         console.log(name);
                         if (selected != name) {
+                            map.fitBounds(bbox, {padding: 40});
                             deinitFloor(selected, roomTypes);
                             selected = name;
-                            buildNav(name, floors, roomTypes);
+                            buildNav(name, floorsMin, floorsMax, roomTypes);
                             if (initialized.get(name)) {
                                 initFloor(name, roomTypes);
                             } else {
-                                initBuilding(name, floors, roomMap, roomTypes);
+                                initBuilding(name, floorsMin, floorsMax, roomMap, roomTypes);
                                 initialized.set(name, true);
                             }
                         }
-                        map.fitBounds(bbox, {padding: 40});
                     }
                 });
             });
@@ -176,7 +185,6 @@
 
     function initFloor(name, roomTypes) {
         let startFloor = $( "#menu a" ).first()[0];
-        console.log(startFloor);
         startFloor.className = 'active';
         map.setLayoutProperty(name + startFloor.textContent + '-borders', 'visibility', 'visible');
         roomTypes.forEach((type)=>{
@@ -196,10 +204,10 @@
         }
     }
 
-    function initBuilding(name, floors, roomMap, roomTypes) {
+    function initBuilding(name, floorsMin, floorsMax, roomMap, roomTypes) {
         let count = 0;
-        let loaded = (floors.get(name) - 1) * 2;
-        for (let i = 2; i <= floors.get(name); i++) {
+        let loaded = (floorsMax.get(name) - floorsMin.get(name) + 1) * 2;
+        for (let i = floorsMin.get(name); i <= floorsMax.get(name); i++) {
             $.getJSON('/assets/' + name + '/' + name + i +'.geojson', function (data) {
                 map.addSource(name + i, {
                     "type": "geojson",
@@ -244,15 +252,19 @@
                 }
             });
         }
+        map.on("click", function(e) {
+            let features = map.queryRenderedFeatures(e.point, { filter: ["in", "class", "DBL", "SGL"]});
+            console.log(features[0]);
+        });
     }
 
-    function buildNav(name, floors, roomTypes) {
-        let start = 2;
+    function buildNav(name, floorsMin, floorsMax, roomTypes) {
+        let start = floorsMin.get(name);
         $('#menu').show();
         let layers = document.getElementById('menu');
         $(layers).empty();
 
-        for (let i = start; i <= floors.get(name); i++) {
+        for (let i = start; i <= floorsMax.get(name); i++) {
             let level = i;
 
             let link = document.createElement('a');
@@ -289,7 +301,7 @@
     }
 
     map.on('load', function () {
-        initMap(buildings, floors, roomMap, roomTypes, initialized, selected);
+        initMap(buildings, floorsMin, floorsMax, roomMap, roomTypes, initialized, selected);
 
         map.on('mousemove', function (e) {
             document.getElementById('info').innerHTML =

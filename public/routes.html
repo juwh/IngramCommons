@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title></title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script
+            src="https://code.jquery.com/jquery-3.1.1.min.js"
+            integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+            crossorigin="anonymous"></script>
+    <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script>
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.32.1/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.32.1/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+    </style>
+</head>
+<body>
+
+<style type='text/css'>
+    #info {
+        display: block;
+        position: relative;
+        margin: 0px auto;
+        width: 50%;
+        padding: 10px;
+        border: none;
+        border-radius: 3px;
+        font-size: 12px;
+        text-align: center;
+        color: #222;
+        background: #fff;
+    }
+</style>
+
+<div id='map'></div>
+<pre id='info'></pre>
+
+<script>
+    let bounds = [
+        [-86.8327, 36.1310], // Southwest coordinates
+        [-86.7770, 36.1560]  // Northeast coordinates
+    ];
+
+    let adjList = [];
+
+    mapboxgl.accessToken = 'pk.eyJ1IjoianV3aCIsImEiOiJjaXphOGV6c2IwMHk3MzJud3Frczl0MmY0In0.m1RBhGmdMfvJOxJogamoeQ';
+    let map = new mapboxgl.Map({
+        container: 'map', // container id
+        style: 'mapbox://styles/mapbox/streets-v9', //stylesheet location
+        center: [-86.7989, 36.1407], // starting position
+        zoom: 16.8, // starting zoom
+        maxBounds: bounds // Sets bounds as max
+    });
+    // disable map rotation using right click + drag
+    map.dragRotate.disable();
+    // disable map rotation using touch rotation gesture
+    map.touchZoomRotate.disableRotation();
+
+    map.on('load', function () {
+        map.getCanvas().style.cursor = 'crosshair';
+        map.on('mousemove', function (e) {
+            document.getElementById('info').innerHTML =
+                // e.point is the x, y coordinates of the mousemove event relative
+                // to the top-left corner of the map
+                JSON.stringify(e.point) + '<br />' +
+                // e.lngLat is the longitude, latitude geographical position of the event
+                JSON.stringify(e.lngLat) + '<br />' + map.getZoom();
+        });
+
+        $.getJSON('/assets/graph.geojson', (data) => {
+            // add it to the map
+            map.addSource('graph', { type: 'geojson', data: data });
+            map.addLayer({
+                "id": "edges",
+                "type": "line",
+                "source": "graph",
+                "paint": {
+                    "line-color": "#9AC190",
+                    "line-opacity": 0.75,
+                    "line-width": 5
+                },
+                "filter": ["==", "$type", "LineString"]
+            });
+            map.addLayer({
+                "id": "vertices",
+                "type": "circle",
+                "source": "graph",
+                "paint": {
+                    "circle-radius": 20,
+                    "circle-opacity": 0.25
+                },
+                "filter": ["==", "$type", "Point"]
+            });
+
+            let routeClick = (e) => {
+                console.log(data);
+                let lng = e.lngLat.lng;
+                let lat = e.lngLat.lat;
+                let point = {
+                    "type": "Feature",
+                    "properties": { "class": "rVertex", "id": "237" },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [lng, lat]
+                    }
+                };
+                let points = map.queryRenderedFeatures(e.point, { filter: ["in", "class", "rVertex"], layers: ['vertices']});
+                console.log(points);
+                if (points.length) {
+                    data.features[0].geometry.coordinates.push([points[0].geometry.coordinates[0], points[0].geometry.coordinates[1]]);
+                } else {
+                    data.features.push(point);
+                    data.features[0].geometry.coordinates.push([lng, lat]);
+                }
+                map.getSource('graph').setData(data);
+            };
+            map.on('click', routeClick);
+
+            let routeMove = (e) => {
+                let points = map.queryRenderedFeatures(e.point, { filter: ["in", "class", "rVertex"], layers: ['vertices']});
+                if (points.length) {
+                    data.features[0].geometry.coordinates[data.features[0].geometry.coordinates.length - 1] = [points[0].geometry.coordinates[0], points[0].geometry.coordinates[1]]
+                } else {
+                    data.features[0].geometry.coordinates[data.features[0].geometry.coordinates.length - 1] = [e.lngLat.lng, e.lngLat.lat];
+                }
+                map.getSource('graph').setData(data);
+            };
+            map.on('mousemove', routeMove);
+
+        });
+    });
+
+</script>
+
+</body>
+</html>
