@@ -32,10 +32,44 @@
         color: #222;
         background: #fff;
     }
+
+    #edit {
+        background: #fff;
+        position: absolute;
+        z-index: 1;
+        top: 80px;
+        left: 20px;
+        border-radius: 3px;
+        width: 44px;
+        box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.2);
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13px;
+        display: block;
+        text-decoration: none;
+        text-align: center;
+    }
+
+    #done {
+        background: #fff;
+        position: absolute;
+        z-index: 1;
+        top: 120px;
+        left: 20px;
+        border-radius: 3px;
+        width: 44px;
+        box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.2);
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13px;
+        display: block;
+        text-decoration: none;
+        text-align: center;
+    }
 </style>
 
 <div id='map'></div>
 <pre id='info'></pre>
+<button id="edit" type="button" class="btn-default">Edit</button>
+<button id="done" type="button" class="btn-default">Done</button>
 
 <script>
     let bounds = [
@@ -58,20 +92,10 @@
     // disable map rotation using touch rotation gesture
     map.touchZoomRotate.disableRotation();
 
-    map.on('load', function () {
-        map.getCanvas().style.cursor = 'crosshair';
-        map.on('mousemove', function (e) {
-            document.getElementById('info').innerHTML =
-                // e.point is the x, y coordinates of the mousemove event relative
-                // to the top-left corner of the map
-                JSON.stringify(e.point) + '<br />' +
-                // e.lngLat is the longitude, latitude geographical position of the event
-                JSON.stringify(e.lngLat) + '<br />' + map.getZoom();
-        });
-
+    function Routes() {
         $.getJSON('/assets/graph.geojson', (data) => {
             // add it to the map
-            map.addSource('graph', { type: 'geojson', data: data });
+            map.addSource('graph', {type: 'geojson', data: data});
             map.addLayer({
                 "id": "edges",
                 "type": "line",
@@ -93,42 +117,62 @@
                 },
                 "filter": ["==", "$type", "Point"]
             });
-
-            let routeClick = (e) => {
-                console.log(data);
-                let lng = e.lngLat.lng;
-                let lat = e.lngLat.lat;
-                let point = {
-                    "type": "Feature",
-                    "properties": { "class": "rVertex", "id": "237" },
-                    "geometry": {
-                        "type": "Point",
-                        "coordinates": [lng, lat]
+            $('#edit').on('click', (e) => {
+                map.getCanvas().style.cursor = 'crosshair';
+                let routeMove = (e) => {
+                    let points = map.queryRenderedFeatures(e.point, { filter: ["in", "class", "rVertex"], layers: ['vertices']});
+                    if (points.length) {
+                        data.features[0].geometry.coordinates[data.features[0].geometry.coordinates.length - 1] = [points[0].geometry.coordinates[0], points[0].geometry.coordinates[1]]
+                    } else {
+                        data.features[0].geometry.coordinates[data.features[0].geometry.coordinates.length - 1] = [e.lngLat.lng, e.lngLat.lat];
                     }
+                    map.getSource('graph').setData(data);
                 };
-                let points = map.queryRenderedFeatures(e.point, { filter: ["in", "class", "rVertex"], layers: ['vertices']});
-                console.log(points);
-                if (points.length) {
-                    data.features[0].geometry.coordinates.push([points[0].geometry.coordinates[0], points[0].geometry.coordinates[1]]);
-                } else {
-                    data.features.push(point);
-                    data.features[0].geometry.coordinates.push([lng, lat]);
-                }
-                map.getSource('graph').setData(data);
-            };
-            map.on('click', routeClick);
 
-            let routeMove = (e) => {
-                let points = map.queryRenderedFeatures(e.point, { filter: ["in", "class", "rVertex"], layers: ['vertices']});
-                if (points.length) {
-                    data.features[0].geometry.coordinates[data.features[0].geometry.coordinates.length - 1] = [points[0].geometry.coordinates[0], points[0].geometry.coordinates[1]]
-                } else {
-                    data.features[0].geometry.coordinates[data.features[0].geometry.coordinates.length - 1] = [e.lngLat.lng, e.lngLat.lat];
-                }
-                map.getSource('graph').setData(data);
-            };
-            map.on('mousemove', routeMove);
+                let routeClick = (e) => {
+                    let lng = e.lngLat.lng;
+                    let lat = e.lngLat.lat;
+                    let point = {
+                        "type": "Feature",
+                        "properties": { "class": "rVertex", "id": "237" },
+                        "geometry": {
+                            "type": "Point",
+                            "coordinates": [lng, lat]
+                        }
+                    };
+                    let points = map.queryRenderedFeatures(e.point, { filter: ["in", "class", "rVertex"], layers: ['vertices']});
+                    console.log(points);
+                    if (points.length) {
+                        data.features[0].geometry.coordinates.push([points[0].geometry.coordinates[0], points[0].geometry.coordinates[1]]);
+                    } else {
+                        data.features.push(point);
+                        data.features[0].geometry.coordinates.push([lng, lat]);
+                    }
+                    map.getSource('graph').setData(data);
+                };
 
+                map.on('click', routeClick);
+                map.on('mousemove', routeMove);
+                $('#done').on('click', (e) => {
+                    map.off('click', routeClick);
+                    map.off('mousemove', routeMove);
+                    data.features[0].geometry.coordinates.pop();
+                    map.getSource('graph').setData(data);
+                    map.getCanvas().style.cursor = 'default';
+                });
+            });
+        });
+    }
+
+    map.on('load', function () {
+        Routes();
+        map.on('mousemove', function (e) {
+            document.getElementById('info').innerHTML =
+                // e.point is the x, y coordinates of the mousemove event relative
+                // to the top-left corner of the map
+                JSON.stringify(e.point) + '<br />' +
+                // e.lngLat is the longitude, latitude geographical position of the event
+                JSON.stringify(e.lngLat) + '<br />' + map.getZoom();
         });
     });
 
