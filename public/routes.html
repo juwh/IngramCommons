@@ -93,13 +93,13 @@
     map.touchZoomRotate.disableRotation();
 
     function Routes() {
-        $.getJSON('/assets/graph.geojson', (data) => {
+        $.getJSON('/assets/edges.geojson', (data) => {
             // add it to the map
-            map.addSource('graph', {type: 'geojson', data: data});
+            map.addSource('edges', {type: 'geojson', data: data});
             map.addLayer({
                 "id": "edges",
                 "type": "line",
-                "source": "graph",
+                "source": "edges",
                 "paint": {
                     "line-color": "#9AC190",
                     "line-opacity": 0.75,
@@ -110,7 +110,7 @@
             map.addLayer({
                 "id": "vertices",
                 "type": "circle",
-                "source": "graph",
+                "source": "edges",
                 "paint": {
                     "circle-radius": 20,
                     "circle-opacity": 0.25
@@ -126,7 +126,7 @@
                     } else {
                         data.features[0].geometry.coordinates[data.features[0].geometry.coordinates.length - 1] = [e.lngLat.lng, e.lngLat.lat];
                     }
-                    map.getSource('graph').setData(data);
+                    map.getSource('edges').setData(data);
                 };
 
                 let routeClick = (e) => {
@@ -148,7 +148,7 @@
                         data.features.push(point);
                         data.features[0].geometry.coordinates.push([lng, lat]);
                     }
-                    map.getSource('graph').setData(data);
+                    map.getSource('edges').setData(data);
                 };
 
                 map.on('click', routeClick);
@@ -157,7 +157,7 @@
                     map.off('click', routeClick);
                     map.off('mousemove', routeMove);
                     data.features[0].geometry.coordinates.pop();
-                    map.getSource('graph').setData(data);
+                    map.getSource('edges').setData(data);
                     map.getCanvas().style.cursor = 'default';
                 });
             });
