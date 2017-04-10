@@ -175,7 +175,7 @@
                     console.log(features);
                     if (features.length) {
                         console.log(name);
-                        if (selected != name) {
+                        if (selected !== name) {
                             map.fitBounds(bbox, {padding: 40});
                             deinitFloor(selected, roomTypes);
                             selected = name;
@@ -303,6 +303,14 @@
         map.on("click", function(e) {
             let features = map.queryRenderedFeatures(e.point, { filter: ["in", "class", "DBL", "SGL"]});
             console.log(features[0]);
+            /*
+            if (features.length) {
+                let roomInfo = new mapboxgl.Popup({closeOnClick: true})
+                    .setLngLat([e.lngLat.lng, e.lngLat.lat])
+                    .setHTML('<h1>Hello World!</h1>')
+                    .addTo(map);
+            }
+            */
         });
     }
 
@@ -331,7 +339,7 @@
 
                 let visibility = map.getLayoutProperty(clickedBase, 'visibility');
 
-                if (clickedLayer != activeLevel) {
+                if (clickedLayer !== activeLevel) {
                     active.className = '';
                     map.setLayoutProperty(name + activeLevel + '-borders', 'visibility', 'none');
                     roomTypes.forEach((type)=>{
