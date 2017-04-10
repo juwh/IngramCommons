@@ -1,7 +1,7 @@
 {
-  "name": "assignment5",
+  "name": "IngramCommons",
   "version": "1.0.0",
-  "description": "Assignment 5",
+  "description": "Ingram Commons Indoor Mapping",
   "main": "/src/server/index.js",
   "dependencies": {
     "bluebird": "^3.5.0",
@@ -52,6 +52,6 @@
     "test": "mocha --recursive",
     "start": "node ./src/server/index.js"
   },
-  "author": "G. Hemingway",
+  "author": "W. Ju",
   "license": "ISC"
 }
