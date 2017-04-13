@@ -39,7 +39,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // Connect to mongoBD
 let options = { promiseLibrary: require('bluebird') };
-mongoose.connect('mongodb://localhost:32768/juwh', options, err => {
+mongoose.connect('mongodb://192.168.99.100:32768/juwh', options, err => {
     if (err) console.log(err);
     else console.log('\t MongoDB connected');
 });

@@ -2,15 +2,15 @@
 <html>
 <head>
     <meta charset='utf-8' />
-    <title></title>
+    <title>Campus Map</title>
     <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
     <script
             src="https://code.jquery.com/jquery-3.1.1.min.js"
             integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
             crossorigin="anonymous"></script>
     <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script>
-    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.32.1/mapbox-gl.js'></script>
-    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.32.1/mapbox-gl.css' rel='stylesheet' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.35.1/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.35.1/mapbox-gl.css' rel='stylesheet' />
     <style>
         body { margin:0; padding:0; }
         #map { position:absolute; top:0; bottom:0; width:100%; }
@@ -142,6 +142,11 @@
     // disable map rotation using touch rotation gesture
     map.touchZoomRotate.disableRotation();
 
+    let popup = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false
+    });
+
     function initMap(buildings, floorsMin, floorsMax, roomMap, roomTypes, initialized, selected) {
         buildings.forEach((name) => {
             $.getJSON('/assets/' + name + '/' + name + '.geojson', function (data) {
@@ -176,6 +181,7 @@
                     if (features.length) {
                         console.log(name);
                         if (selected !== name) {
+                            popup.remove();
                             map.fitBounds(bbox, {padding: 40});
                             deinitFloor(selected, roomTypes);
                             selected = name;
@@ -264,34 +270,39 @@
                         "filter": ["==", "class", type]
                     });
 
-                    // Hover effect commented out due to performance issues
-                    /*
-                    map.addLayer({
-                        "id": name + i + '-' + type + '-hover',
-                        "type": "fill",
-                        "source": name + i + '-rooms',
-                        "layout": {},
-                        "paint": {
-                            "fill-color": roomMap.get(type),
-                            "fill-opacity": 1
-                        },
-                        "filter": ["==", "id", ""]
+                    // location of the feature, with description HTML from its properties.
+                    map.on('click', `${name + i}-${type}`, function (e) {
+                        let features = map.queryRenderedFeatures(e.point);
+                        console.log(features[0].properties.id);
+                        $.ajax({
+                            method: 'GET',
+                            url: `/v1/building/${name}/${features[0].properties.id}`,
+                            success: data => {
+                                popup
+                                    .setLngLat([e.lngLat.lng, e.lngLat.lat])
+                                    .setHTML("Hello")
+                                    .addTo(map);
+                            },
+                            error: err => {
+                                popup
+                                    .setLngLat([e.lngLat.lng, e.lngLat.lat])
+                                    .setHTML("Error: Database retrieval error.")
+                                    .addTo(map);
+                            }
+                        });
                     });
 
-                    map.on("mousemove", function(e) {
-                        let features = map.queryRenderedFeatures(e.point, { layers: [name + i + '-' + type] });
-                        if (features.length) {
-                            map.setFilter(name + i + '-' + type + '-hover', ["==", "id", features[0].properties.id]);
-                        } else {
-                            map.setFilter(name + i + '-' + type + '-hover', ["==", "id", ""]);
-                        }
+                    // Change the cursor to a pointer when the mouse is over the places layer.
+                    map.on('mouseenter', `${name + i}-${type}`, function (e) {
+                        map.getCanvas().style.cursor = 'pointer';
+                        map.setPaintProperty(`${name + i}-${type}`, 'fill-opacity', 1);
                     });
 
                     // Reset the state-fills-hover layer's filter when the mouse leaves the map
-                    map.on("mouseout", function() {
-                        map.setFilter(name + i + '-' + type + '-hover', ["==", "id", ""]);
+                    map.on('mouseleave', `${name + i}-${type}`, function (e) {
+                        map.getCanvas().style.cursor = 'default';
+                        map.setPaintProperty(`${name + i}-${type}`, 'fill-opacity', 0.5);
                     });
-                    */
 
                 });
                 count++;
@@ -303,14 +314,6 @@
         map.on("click", function(e) {
             let features = map.queryRenderedFeatures(e.point, { filter: ["in", "class", "DBL", "SGL"]});
             console.log(features[0]);
-            /*
-            if (features.length) {
-                let roomInfo = new mapboxgl.Popup({closeOnClick: true})
-                    .setLngLat([e.lngLat.lng, e.lngLat.lat])
-                    .setHTML('<h1>Hello World!</h1>')
-                    .addTo(map);
-            }
-            */
         });
     }
 
@@ -331,6 +334,7 @@
             link.onclick = function (e) {
                 e.preventDefault();
                 e.stopPropagation();
+                popup.remove();
                 let active = $( '#menu' ).find('.active')[0];
                 let activeLevel = active.textContent;
                 let clickedLayer = this.textContent;
