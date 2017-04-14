@@ -14,10 +14,11 @@ let UniversityPerson = new Schema({
     last_name: String,
     year: String,
     major: String
-});
+}, { _id : false });
 
 /* Schema for individual room within building */
 let Room = new Schema({
+    building: String,
     number: String,
     type: String,
     residents: [ UniversityPerson ],
@@ -28,10 +29,12 @@ let Room = new Schema({
 /* Schema for overall building */
 let Building = new Schema({
     name: String,
-    rooms: [ Room ],
+    rooms: [{ type: Schema.ObjectId, ref: 'Room' }],
     coordinates: [ Number ]
 });
 
 /***************** Export *******************/
 
 module.exports = mongoose.model('Building', Building);
+module.exports = mongoose.model('Room', Room);
+module.exports = mongoose.model('UniversityPerson', UniversityPerson);

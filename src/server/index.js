@@ -45,14 +45,15 @@ mongoose.connect('mongodb://192.168.99.100:32768/juwh', options, err => {
 });
 
 // Import our Data Models
-/*
 app.models = {
-    Building: require('./models/building'),
-    Floor: require('./models/floor'),
-    Room: require('./models/room')
+    UniversityPerson: require('./models/building'),
+    Room: require('./models/building'),
+    Building: require('./models/building')
 };
 
 // Import our API Routes
+require('./api/v1/room')(app);
+/*
 require('./api/v1/game')(app);
 require('./api/v1/user')(app);
 require('./api/v1/session')(app);

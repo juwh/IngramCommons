@@ -195,6 +195,16 @@
                         }
                     }
                 });
+
+                // Change the cursor to a pointer when the mouse is over the layer.
+                map.on('mouseenter', `${name}-fills`, function (e) {
+                    map.getCanvas().style.cursor = 'pointer';
+                });
+
+                // Change it back to a pointer when it leaves.
+                map.on('mouseleave', `${name}-fills`, function (e) {
+                    map.getCanvas().style.cursor = 'default';
+                });
             });
         });
     }
@@ -292,13 +302,13 @@
                         });
                     });
 
-                    // Change the cursor to a pointer when the mouse is over the places layer.
+                    // Change the cursor to a pointer when the mouse is over the layer.
                     map.on('mouseenter', `${name + i}-${type}`, function (e) {
                         map.getCanvas().style.cursor = 'pointer';
                         map.setPaintProperty(`${name + i}-${type}`, 'fill-opacity', 1);
                     });
 
-                    // Reset the state-fills-hover layer's filter when the mouse leaves the map
+                    // Change it back to a pointer when it leaves.
                     map.on('mouseleave', `${name + i}-${type}`, function (e) {
                         map.getCanvas().style.cursor = 'default';
                         map.setPaintProperty(`${name + i}-${type}`, 'fill-opacity', 0.5);
@@ -314,6 +324,7 @@
         map.on("click", function(e) {
             let features = map.queryRenderedFeatures(e.point, { filter: ["in", "class", "DBL", "SGL"]});
             console.log(features[0]);
+            console.log(e.lngLat.lng, e.lngLat.lat);
         });
     }
 
