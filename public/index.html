@@ -288,15 +288,29 @@
                             method: 'GET',
                             url: `/v1/building/${name}/${features[0].properties.id}`,
                             success: data => {
+                                let building = data.building.charAt(0).toUpperCase() + data.building.slice(1);
+                                let number = data.number;
+                                let type = data.type;
+                                let floor = data.floor;
+                                let popupContents = `<b>Building: </b> ${building} <br><b>Room Number: </b> ${number} <br>`;
+                                popupContents += `<b>Type: </b> ${type} <br><b>Floor Number: </b> ${floor} <br><b>Residents: </b>`;
+                                data.residents.forEach(resident => {
+                                    let residentContents = `<p>
+                                    <b>Name: </b>${resident.first_name + ' ' + resident.last_name} <br>
+                                    <b>Year: </b>${resident.year} <br>
+                                    <b>Major: </b>${resident.major} <br>
+                                    </p>`;
+                                    popupContents += residentContents;
+                                });
                                 popup
-                                    .setLngLat([e.lngLat.lng, e.lngLat.lat])
-                                    .setHTML("Hello")
+                                    .setLngLat(data.coordinates)
+                                    .setHTML(popupContents)
                                     .addTo(map);
                             },
                             error: err => {
                                 popup
                                     .setLngLat([e.lngLat.lng, e.lngLat.lat])
-                                    .setHTML("Error: Database retrieval error.")
+                                    .setHTML("Error: Database retrieval")
                                     .addTo(map);
                             }
                         });

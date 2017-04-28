@@ -14,7 +14,9 @@ module.exports = app => {
      */
     app.post('/v1/:building', (req, res) => {
         let data = req.body;
+        console.log(data);
         let room = new app.models.Room(data);
+        console.log(room);
         room.save(err => {
             if (err) {
                 return res.status(400).send({error: 'error saving room'});
@@ -35,13 +37,11 @@ module.exports = app => {
      * @param {req.params.building} Building of the room to query for
      * @param {req.params.room} Room of the person to query for
      */
-    app.get('/v1/building/:building/:room', (req, res) => {
+    app.get('/v1/:building/:room', (req, res) => {
         Room
             .findOne({ 'building' : req.params.building, 'number' : req.params.room })
             .populate('residents')
             .exec((err, room) => {
-                console.log(room);
-                console.log(err);
                 if (room) {
                     res.status(200).send({
                         building: room.building,

@@ -46,8 +46,8 @@ mongoose.connect('mongodb://192.168.99.100:32768/juwh', options, err => {
 
 // Import our Data Models
 app.models = {
-    UniversityPerson: require('./models/building'),
-    Room: require('./models/building'),
+    UniversityPerson: require('./models/person'),
+    Room: require('./models/room'),
     Building: require('./models/building')
 };
 

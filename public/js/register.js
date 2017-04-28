@@ -34,7 +34,7 @@ function onRegister(event) {
     }
 
     const data = {
-        building:           document.getElementById('building').value,
+        building:           document.getElementById('building').value.toLowerCase(),
         number:             document.getElementById('number').value,
         type:               document.getElementById('type').value,
         residents:          residents,
